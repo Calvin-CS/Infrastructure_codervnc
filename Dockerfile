@@ -7,7 +7,7 @@ LABEL "com.kasmweb.image"="true"
 LABEL "com.kasmweb.gpu_acceleration_egl"="nvidia"
 
 # Set versions and platforms
-ARG BUILDDATE=20240725-1
+ARG BUILDDATE=20240725-2
 ARG USER=ubuntu
 ARG TZ='America/Detroit'
 
@@ -65,6 +65,7 @@ RUN apt update -y && \
     apt install -y \
     apt-transport-https \
     ca-certificates \
+    colord \
     curl \
     git \
     gnupg \
@@ -72,6 +73,7 @@ RUN apt update -y && \
     locales \
     lsb-release \
     nano \
+    pm-utils \
     software-properties-common \
     tar \
     tofrodos \
@@ -322,7 +324,7 @@ RUN chmod 0644 /etc/unburden-home-dir && \
     chmod 0644 /etc/unburden-home-dir.list && \
     chmod 0644 /etc/default/unburden-home-dir && \
     # Add a few more directories that are needed
-    echo "m d .config/xfce4 xfce4-config\n" >> /etc/unburden-home-dir.list
+    echo "m d .config/xfce4 xfce4-config" >> /etc/unburden-home-dir.list
 
 # Cleanup misc files
 RUN rm -f /var/log/*.log && \
