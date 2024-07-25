@@ -3,55 +3,26 @@ FROM ubuntu:noble
 ### Labels
 LABEL maintainer="Chris Wieringa <cwieri39@calvin.edu>"
 LABEL "org.opencontainers.image.authors"='Chris Wieringa cwieri39@calvin.edu"'
-LABEL "com.kasmweb.image"="true"
-LABEL "com.kasmweb.gpu_acceleration_egl"="nvidia"
 
 # Set versions and platforms
 ARG BUILDDATE=20240725-2
 ARG USER=ubuntu
 ARG TZ='America/Detroit'
 
-# KasmVNC
-ARG BG_IMG=bg_kasm.png
-ARG EXTRA_SH=noop.sh
-ARG START_PULSEAUDIO=1
-ARG START_XFCE4=1
+ARG TURBOVNC_VERSION=3.1.1
+ARG VIRTUALGL_VERSION=3.1.1
+ARG LIBJPEG_VERSION=3.0.3
+ARG NO_VNC_VERSION=1.2.0
+ARG WEBSOCKIFY_VERSION=0.12.0
 
-ENV AUDIO_PORT=4901 \
-    DEBIAN_FRONTEND=noninteractive \
-    DISPLAY=:1 \
-    DISTRO=ubuntu \
-    GOMP_SPINCOUNT=0 \
-    HOME=/home/kasm-default-profile \
-    INST_SCRIPTS=/dockerstartup/install \
-    KASMVNC_AUTO_RECOVER=true \
-    KASM_VNC_PATH=/usr/share/kasmvnc \
-    LANG=en_US.UTF-8 \
+ARG VNC_ROOT_DIR=/opt/vnc
+
+# Set Environment files
+ENV LANG=en_US.UTF-8 \
     LANGUAGE=en_US:en \
     LC_ALL=en_US.UTF-8 \
-    TZ=$TZ \
-    LD_LIBRARY_PATH=/opt/libjpeg-turbo/lib64/:/usr/local/lib/ \
-    LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:/usr/lib/i386-linux-gnu${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}:/usr/local/nvidia/lib:/usr/local/nvidia/lib64 \
-    MAX_FRAME_RATE=24 \
-    NO_VNC_PORT=6901 \
-    NVIDIA_DRIVER_CAPABILITIES=${NVIDIA_DRIVER_CAPABILITIES:+$NVIDIA_DRIVER_CAPABILITIES,}graphics,compat32,utility \
-    OMP_WAIT_POLICY=PASSIVE \
-    PULSE_RUNTIME_PATH=/var/run/pulse \
-    SDL_GAMECONTROLLERCONFIG="030000005e040000be02000014010000,XInput Controller,platform:Linux,a:b0,b:b1,x:b2,y:b3,back:b8,guide:b16,start:b9,leftstick:b10,rightstick:b11,leftshoulder:b4,rightshoulder:b5,dpup:b12,dpdown:b13,dpleft:b14,dpright:b15,leftx:a0,lefty:a1,rightx:a2,righty:a3,lefttrigger:b6,righttrigger:b7" \
-    SHELL=/bin/bash \
-    START_PULSEAUDIO=$START_PULSEAUDIO \
-    STARTUPDIR=/dockerstartup \
-    START_XFCE4=$START_XFCE4 \
     TERM=xterm-256color \
-    TZ=$TZ \
-    VNC_COL_DEPTH=24 \
-    VNCOPTIONS="-PreferBandwidth -DynamicQualityMin=4 -DynamicQualityMax=7 -DLP_ClipDelay=0" \
-    VNC_PORT=5901 \
-    VNC_PORT=5901 \
-    VNC_PW=vncpassword \
-    VNC_RESOLUTION=1280x1024 \
-    VNC_RESOLUTION=1280x720 \
-    VNC_VIEW_ONLY_PW=vncviewonlypassword
+    TZ=${TZ}
 
 # Do all run commands with bash
 SHELL ["/bin/bash", "-c"] 
@@ -114,161 +85,124 @@ RUN mkdir -p /scripts
 ##     https://github.com/kasmtech/workspaces-core-images/blob/develop/dockerfile-kasm-core
 ##################################
 
-### Home setup
-WORKDIR $HOME
-RUN mkdir -p $HOME/Desktop
-
 ### Support NVIDIA gpus for graphics acceleration
 RUN echo "/usr/local/nvidia/lib" >> /etc/ld.so.conf.d/nvidia.conf && \
     echo "/usr/local/nvidia/lib64" >> /etc/ld.so.conf.d/nvidia.conf
-COPY workspaces-core-images/src/ubuntu/install/nvidia/10_nvidia.json /usr/share/glvnd/egl_vendor.d/10_nvidia.json
+ADD --chmod=0644 https://raw.githubusercontent.com/kasmtech/workspaces-core-images/develop/src/ubuntu/install/nvidia/10_nvidia.json /usr/share/glvnd/egl_vendor.d/10_nvidia.json
 
-### Setup package rules
-COPY workspaces-core-images/src/ubuntu/install/package_rules $INST_SCRIPTS/package_rules/
-RUN bash $INST_SCRIPTS/package_rules/package_rules.sh && rm -rf $INST_SCRIPTS/package_rules/
+##################################
+## Container configuration for GUI
+##  -- based from https://github.com/coder/enterprise-images/tree/main/deprecated/vnc
+##################################
 
-### Install common tools
-COPY workspaces-core-images/src/ubuntu/install/tools $INST_SCRIPTS/tools/
-RUN bash $INST_SCRIPTS/tools/install_tools.sh && rm -rf $INST_SCRIPTS/tools/
+# Install quality of life packages.
+RUN yes | unminimize
 
-### Copy over the maximization script to our startup dir for use by app images.
-COPY workspaces-core-images/src/ubuntu/install/maximize_script $STARTUPDIR/
-
-### Install custom fonts
-# NOTE: I don't need every font/language -- just stick with english and specified noto packages
-# COPY workspaces-core-images/src/ubuntu/install/fonts $INST_SCRIPTS/fonts/
-# RUN bash $INST_SCRIPTS/fonts/install_custom_fonts.sh && rm -rf $INST_SCRIPTS/fonts/
+# Start with some extra desktop packages and APT setup
 RUN apt update -y && \
-    apt install -y fonts-noto-core \
-    fonts-noto-cjk \
-    fonts-noto-color-emoji \
-    language-pack-en
+    DEBIAN_FRONTEND=noninteractive apt install -y \
+    supervisor \
+    xorg \
+    ssh \
+    xfce4 \
+    xfce4-goodies \
+    x11-apps \
+    dbus-x11 \
+    xterm \
+    fonts-lyx \
+    libxtst6 \
+    libxv1 \
+    libglu1-mesa \
+    libc6-dev \
+    libglu1 \
+    libsm6 \
+    libxv1 \
+    x11-xkb-utils \
+    xauth \
+    xfonts-base \
+    xkb-data \
+    && rm -rf /var/lib/apt/lists/*
 
-### Install xfce UI
-COPY workspaces-core-images/src/ubuntu/install/xfce $INST_SCRIPTS/xfce/
-RUN bash $INST_SCRIPTS/xfce/install_xfce_ui.sh && rm -rf $INST_SCRIPTS/xfce/
-ADD workspaces-core-images/src/$DISTRO/xfce/.config/ $HOME/.config/
-RUN mkdir -p /usr/share/extra/backgrounds/
-RUN mkdir -p /usr/share/extra/icons/
-ADD workspaces-core-images/src/common/resources/images/bg_kasm.png  /usr/share/backgrounds/bg_kasm.png
-ADD workspaces-core-images/src/common/resources/images/$BG_IMG  /usr/share/backgrounds/bg_default.png
-ADD workspaces-core-images/src/common/resources/images/icon_ubuntu.png /usr/share/extra/icons/icon_ubuntu.png
-ADD workspaces-core-images/src/common/resources/images/icon_ubuntu.png /usr/share/extra/icons/icon_default.png
-ADD workspaces-core-images/src/common/resources/images/icon_kasm.png /usr/share/extra/icons/icon_kasm.png
-ADD workspaces-core-images/src/common/resources/images/egress_info.svg /usr/share/extra/icons/egress_info.svg
-ADD workspaces-core-images/src/common/resources/images/egress_error.svg /usr/share/extra/icons/egress_error.svg
-ADD workspaces-core-images/src/common/resources/images/egress_offline.svg /usr/share/extra/icons/egress_offline.svg
+# Remove packages which may not behave well in a VNC environment.
+RUN apt update -y && \
+  DEBIAN_FRONTEND=noninteractive apt remove -y \
+  xfce4-battery-plugin \
+  xfce4-power-manager-plugins \
+  xfce4-pulseaudio-plugin \
+  light-locker \
+  && rm -rf /var/lib/apt/lists/*
 
-### Install kasm_vnc dependencies and binaries
-COPY workspaces-core-images/src/ubuntu/install/kasm_vnc $INST_SCRIPTS/kasm_vnc/
-RUN bash $INST_SCRIPTS/kasm_vnc/install_kasm_vnc.sh && rm -rf $INST_SCRIPTS/kasm_vnc/
-COPY workspaces-core-images/src/common/install/kasm_vnc/kasmvnc.yaml /etc/kasmvnc/
+# Install and Configure TurboVNC
+ADD --chmod=0644 https://github.com/TurboVNC/turbovnc/releases/download/${TURBOVNC_VERSION}/turbovnc_${TURBOVNC_VERSION}_amd64.deb /tmp/turbovnc_${TURBOVNC_VERSION}_amd64.deb
+ADD --chmod=0644 https://github.com/libjpeg-turbo/libjpeg-turbo/releases/download/${LIBJPEG_VERSION}/libjpeg-turbo-official_${LIBJPEG_VERSION}_amd64.deb /tmp/libjpeg-turbo-official_${LIBJPEG_VERSION}_amd64.deb
+ADD --chmod=0644 https://github.com/VirtualGL/virtualgl/releases/download/${VIRTUALGL_VERSION}/virtualgl_${VIRTUALGL_VERSION}_amd64.deb /tmp/virtualgl_${VIRTUALGL_VERSION}_amd64.deb
 
-### Install Kasm Profile Sync
-COPY workspaces-core-images/src/ubuntu/install/profile_sync $INST_SCRIPTS/profile_sync/
-RUN bash $INST_SCRIPTS/profile_sync/install_profile_sync.sh
+RUN cd /tmp && \
+    apt install -y ./turbovnc_${TURBOVNC_VERSION}_amd64.deb ./libjpeg-turbo-official_${LIBJPEG_VERSION}_amd64.deb ./virtualgl_${VIRTUALGL_VERSION}_amd64.deb && \
+    rm -f /tmp/*.deb && \
+    sed -i 's/$host:/unix:/g' /opt/TurboVNC/bin/vncserver
 
-### Install Kasm Upload Server
-COPY workspaces-core-images/src/ubuntu/install/kasm_upload_server $INST_SCRIPTS/kasm_upload_server/
-RUN bash $INST_SCRIPTS/kasm_upload_server/install_kasm_upload_server.sh  && rm -rf $INST_SCRIPTS/kasm_upload_server/
+RUN ln -s /opt/TurboVNC/bin/* /opt/VirtualGL/bin/* /usr/local/bin/
 
-### Install Audio
-COPY workspaces-core-images/src/ubuntu/install/audio $INST_SCRIPTS/audio/
-RUN bash $INST_SCRIPTS/audio/install_audio.sh  && rm -rf $INST_SCRIPTS/audio/
+# Configure VGL for use in a single user environment.
+# This may trigger a warning about display managers needing to be restarted.
+# This can be ignored as the VNC server manages this lifecycle.  
+RUN vglserver_config -config +s +f +t
+COPY --chmod=0644 files/turbovncserver-security.conf /etc/turbovncserver-security.conf
 
-### Install Audio Input
-COPY workspaces-core-images/src/ubuntu/install/audio_input $INST_SCRIPTS/audio_input/
-RUN bash $INST_SCRIPTS/audio_input/install_audio_input.sh && rm -rf $INST_SCRIPTS/audio_input/
+# Set ENVIRONMENT VARIABLES needed for the next set of files
+ENV VNC_SCRIPTS=$VNC_ROOT_DIR/scripts \
+  VNC_SETUP_SCRIPTS=$VNC_ROOT_DIR/setup \
+  VNC_LOG_DIR=/tmp/.vnc/log \
+  VNC_XSTARTUP=$VNC_ROOT_DIR/xstartup \
+  VNC_PORT=5990 \
+  VNC_DISPLAY_ID=:90 \
+  VNC_COL_DEPTH=24 \
+  VNC_RESOLUTION=3840x2160 \
+  NO_VNC_HOME=$VNC_ROOT_DIR/noVNC \
+  NO_VNC_PORT=6081 \
+  XFCE_BASE_DIR=$VNC_ROOT_DIR/xfce4 \
+  XFCE_DEST_DIR=/home/${USER}/.config/xfce4 \
+  SUPERVISORD_USER=${USER} \
+  SUPERVISORD_HOME=/home/${USER}
 
-### Install Gamepad Service
-COPY workspaces-core-images/src/ubuntu/install/gamepad $INST_SCRIPTS/gamepad/
-RUN bash $INST_SCRIPTS/gamepad/install_gamepad.sh && rm -rf $INST_SCRIPTS/gamepad/
+# Add required files
+# XFCE4 settings
+RUN mkdir -p ${XFCE_BASE_DIR}/xfconf/xfce-perchannel-xml && \
+    chmod 0755 ${XFCE_BASE_DIR} ${XFCE_BASE_DIR}/xfconf ${XFCE_BASE_DIR}/xfconf/xfce-perchannel-xml
+COPY --chmod=0644 files/xfce4/ ${XFCE_BASE_DIR}/
 
-### Install Webcam Service
-COPY workspaces-core-images/src/ubuntu/install/webcam $INST_SCRIPTS/webcam/
-RUN bash $INST_SCRIPTS/webcam/install_webcam.sh && rm -rf $INST_SCRIPTS/webcam/
+RUN sed -i "s+%%BGLOCATION%%+${XFCE_BASE_DIR}+g" ${XFCE_BASE_DIR}/xfconf/xfce-perchannel-xml/displays.xml && \
+    sed -i "s+%%BGLOCATION%%+${XFCE_BASE_DIR}+g" ${XFCE_BASE_DIR}/xfconf/xfce-perchannel-xml/xfce4-desktop.xml
 
-### Install Printer Service
-COPY workspaces-core-images/src/ubuntu/install/printer $INST_SCRIPTS/printer/
-COPY workspaces-core-images/src/ubuntu/install/printer/start_cups.sh /etc/cups/start_cups.sh
-RUN bash $INST_SCRIPTS/printer/install_printer.sh && rm -rf $INST_SCRIPTS/printer
-COPY workspaces-core-images/src/ubuntu/install/printer/resources/*.ppd /etc/cups/ppd/
+# VNC settings
+RUN mkdir -p ${VNC_ROOT_DIR}/scripts ${VNC_ROOT_DIR}/setup && \
+    chmod 0755 ${VNC_ROOT_DIR} ${VNC_ROOT_DIR}/scripts ${VNC_ROOT_DIR}/setup
+COPY --chmod=0644 files/vnc/index.html ${VNC_ROOT_DIR}/index.html
+COPY --chmod=0755 files/vnc/xstartup ${VNC_ROOT_DIR}/xstartup
+COPY --chmod=0755 files/vnc/scripts/vncserver.sh ${VNC_ROOT_DIR}/scripts/vncserver.sh
+COPY --chmod=0755 files/vnc/setup/set_user_permission.sh ${VNC_ROOT_DIR}/setup/set_user_permission.sh
 
-### Install Recorder Service
-COPY workspaces-core-images/src/ubuntu/install/recorder $INST_SCRIPTS/recorder/
-RUN bash $INST_SCRIPTS/recorder/install_recorder.sh && rm -rf $INST_SCRIPTS/recorder
+# Supervisor settings
+ADD --chmod=0644 files/supervisor/ /etc/supervisor/
 
-### Install custom cursors
-COPY workspaces-core-images/src/ubuntu/install/cursors $INST_SCRIPTS/cursors/
-RUN bash $INST_SCRIPTS/cursors/install_cursors.sh && rm -rf $INST_SCRIPTS/cursors/
+# Install NoVNC and configure
+RUN mkdir -p ${NO_VNC_HOME}/utils/websockify && \
+    chmod 0755 ${NO_VNC_HOME}/utils/websockify && \
+    wget -qO- https://github.com/novnc/noVNC/archive/v${NO_VNC_VERSION}.tar.gz | tar xz --strip 1 -C ${NO_VNC_HOME}/ && \
+    wget -qO- https://github.com/novnc/websockify/archive/v${WEBSOCKIFY_VERSION}.tar.gz | tar xz --strip 1 -C ${NO_VNC_HOME}/utils/websockify && \
+    chmod +x -v ${NO_VNC_HOME}/utils/*.sh && \
+    # custom index file
+    ln -s ${VNC_ROOT_DIR}/index.html ${NO_VNC_HOME}/index.html
 
-### configure startup
-COPY workspaces-core-images/src/common/scripts/kasm_hook_scripts $STARTUPDIR
-ADD workspaces-core-images/src/common/startup_scripts $STARTUPDIR
-RUN bash $STARTUPDIR/set_user_permission.sh $STARTUPDIR $HOME && \
-    echo 'source $STARTUPDIR/generate_container_user' >> $HOME/.bashrc
+# Set user permissions
+RUN ${VNC_SETUP_SCRIPTS}/set_user_permission.sh $VNC_ROOT_DIR
 
-### extra configurations needed per distro variant
-COPY workspaces-core-images/src/ubuntu/install/extra $INST_SCRIPTS/extra/
-RUN bash $INST_SCRIPTS/extra/$EXTRA_SH  && rm -rf $INST_SCRIPTS/extra/
-
-### VirtualGL
-COPY workspaces-core-images/src/ubuntu/install/virtualgl $INST_SCRIPTS/virtualgl/
-RUN bash $INST_SCRIPTS/virtualgl/install_virtualgl.sh && rm -rf $INST_SCRIPTS/virtualgl/
-
-### Sysbox support
-COPY workspaces-core-images/src/ubuntu/install/sysbox $INST_SCRIPTS/sysbox/
-RUN bash $INST_SCRIPTS/sysbox/install_systemd.sh && rm -rf $INST_SCRIPTS/sysbox/
-
-### Custom Folder Emblems
-COPY workspaces-core-images/src/ubuntu/install/emblems $INST_SCRIPTS/emblems/
-RUN bash $INST_SCRIPTS/emblems/install_emblems.sh && rm -rf $INST_SCRIPTS/emblems/
-
-### Create user and home directory for base images that don't already define it
-RUN (groupadd -g 1000 kasm-user \
-    && useradd -M -u 1000 -g 1000 kasm-user \
-    && usermod -a -G kasm-user kasm-user) ; exit 0
-ENV HOME=/home/kasm-user
-WORKDIR $HOME
-RUN mkdir -p $HOME && chown -R 1000:0 $HOME
-
-### Create user exclusively for session recording purposes
-RUN (groupadd -g 1001 kasm-recorder \
-    && useradd -M -u 1001 -g 1001 kasm-recorder \
-    && usermod -a -G kasm-recorder) ; exit 0
-
-### FIX PERMISSIONS ## Objective is to change the owner of non-home paths to root, remove write permissions, and set execute where required
-# these files are created on container first exec, by the default user, so we have to create them since default will not have write perm
-RUN touch $STARTUPDIR/wm.log \
-    && touch $STARTUPDIR/window_manager_startup.log \
-    && touch $STARTUPDIR/vnc_startup.log \
-    && touch $STARTUPDIR/no_vnc_startup.log \
-    && chown -R root:root $STARTUPDIR \
-    && find $STARTUPDIR -type d -exec chmod 755 {} \; \
-    && find $STARTUPDIR -type f -exec chmod 644 {} \; \
-    && find $STARTUPDIR -type f -iname "*.sh" -exec chmod 755 {} \; \
-    && find $STARTUPDIR -type f -iname "*.py" -exec chmod 755 {} \; \
-    && find $STARTUPDIR -type f -iname "*.rb" -exec chmod 755 {} \; \
-    && find $STARTUPDIR -type f -iname "*.pl" -exec chmod 755 {} \; \
-    && find $STARTUPDIR -type f -iname "*.log" -exec chmod 666 {} \; \
-    && chmod 755 $STARTUPDIR/upload_server/kasm_upload_server \
-    && chmod 755 $STARTUPDIR/audio_input/kasm_audio_input_server \
-    && chmod 755 $STARTUPDIR/gamepad/kasm_gamepad_server \
-    && chmod 755 $STARTUPDIR/webcam/kasm_webcam_server \
-    && chmod 755 $STARTUPDIR/printer/kasm_printer_service \
-    && chmod 755 $STARTUPDIR/recorder/kasm_recorder_service \
-    && chmod 755 $STARTUPDIR/generate_container_user \
-    && chmod +x $STARTUPDIR/jsmpeg/kasm_audio_out-linux \
-    && rm -rf $STARTUPDIR/install \
-    && mkdir -p $STARTUPDIR/kasmrx/Downloads \
-    && chown 1000:1000 $STARTUPDIR/kasmrx/Downloads \
-    && chown -R root:root /usr/local/bin \
-    && chown 1000:root /var/run/pulse \
-    && rm -Rf /home/kasm-default-profile/.launchpadlib
-
-### Cleanup job
-COPY workspaces-core-images/src/ubuntu/install/cleanup $INST_SCRIPTS/cleanup/
-RUN bash $INST_SCRIPTS/cleanup/cleanup.sh && rm -rf $INST_SCRIPTS/cleanup/
+##################################
+## Add Coder configuration
+##################################
+RUN mkdir -p /coder
+ADD --chmod=0755 files/coder/configure /coder/configure
 
 ##################################
 ## Calvin CS course requirements
@@ -298,15 +232,6 @@ ADD --chmod=0755 https://raw.githubusercontent.com/Calvin-CS/Infrastructure_devc
 RUN /scripts/desktop-packages.sh
 
 ##################################
-## KasmVNC Coder changes
-##################################
-
-# https://github.com/bpmct/coder-templates/blob/main/better-vnc/ modifications
-COPY --chmod=0644 kasmvnc.yaml /etc/kasmvnc/kasmvnc.yaml
-COPY --chmod=0755 vnc_startup.sh /dockerstartup/vnc_startup.sh
-RUN cp -r /home/kasm-user /tmp/kasm-user
-
-##################################
 ## Final Container settings
 ##################################
 
@@ -322,9 +247,7 @@ ADD https://raw.githubusercontent.com/Calvin-CS/Infrastructure_configs/main/auth
 ADD https://raw.githubusercontent.com/Calvin-CS/Infrastructure_configs/main/auth/unburden-home-dir /etc/default/unburden-home-dir
 RUN chmod 0644 /etc/unburden-home-dir && \
     chmod 0644 /etc/unburden-home-dir.list && \
-    chmod 0644 /etc/default/unburden-home-dir && \
-    # Add a few more directories that are needed
-    echo "m d .config/xfce4 xfce4-config" >> /etc/unburden-home-dir.list
+    chmod 0644 /etc/default/unburden-home-dir
 
 # Cleanup misc files
 RUN rm -f /var/log/*.log && \
@@ -335,11 +258,7 @@ RUN rm -f /var/log/*.log && \
 RUN locale-gen ${LANG}
 
 # Ports and user
-EXPOSE $VNC_PORT \
-       $NO_VNC_PORT \
-       $UPLOAD_PORT \
-       $AUDIO_PORT
-
 USER ${USER}
 WORKDIR /home/${USER}
 ENTRYPOINT [ "/usr/bin/bash", "-l" ]
+EXPOSE $NO_VNC_PORT
