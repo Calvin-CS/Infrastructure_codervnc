@@ -199,12 +199,6 @@ RUN mkdir -p ${NO_VNC_HOME}/utils/websockify && \
 RUN ${VNC_SETUP_SCRIPTS}/set_user_permission.sh $VNC_ROOT_DIR
 
 ##################################
-## Add Coder configuration
-##################################
-RUN mkdir -p /coder
-ADD --chmod=0755 files/coder/configure /coder/configure
-
-##################################
 ## Calvin CS course requirements
 ##################################
 # CS10X
@@ -228,8 +222,18 @@ ADD --chmod=0755 https://raw.githubusercontent.com/Calvin-CS/Infrastructure_devc
 RUN /scripts/CS262-packages.sh
 
 # Desktop apps
-ADD --chmod=0755 https://raw.githubusercontent.com/Calvin-CS/Infrastructure_devcontainer/main/scripts/desktop-packages.sh /scripts/desktop-packages.sh
+ADD --chmod=0755 files/desktop-packages.sh /scripts/desktop-packages.sh
+ADD --chmod=0755 files/alias.sh /etc/profile.d/
 RUN /scripts/desktop-packages.sh
+
+# Coder apps
+ADD --chmod=0755 files/coder-apps.sh /scripts/coder-apps.sh
+RUN /scripts/coder-apps.sh
+
+# Custom 
+
+# Clean
+RUN rm -rf /scripts
 
 ##################################
 ## Final Container settings
