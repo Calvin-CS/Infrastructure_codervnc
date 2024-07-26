@@ -70,18 +70,6 @@ sed -i 's#/usr/share/code/code#/usr/share/code/code --no-sandbox##' /usr/share/a
 apt update -y 
 DEBIAN_FRONTEND=noninteractive apt install -y python3 python3-pip python3-tk cython3 python3-guizero python3-numpy python3-requests python3-pil python3-scipy python3-matplotlib python3-pgzero python3-gpiozero python3-pygame python3-flask python3-pytest python3-colorama python3-pandas python3-bs4 python3-lxml python3-openpyxl python3-xlsxwriter python3-xlrd python3-xlwt python3-html5lib python3-odf thonny
 rm -rf /var/lib/apt/lists/*
-cat << EOF > /usr/share/applications/thonny.desktop
-[Desktop Entry]
-Type=Application
-Name=Thonny
-Comment=Thonny Python3 Integrated Development Environment
-Icon=/usr/share/pixmaps/python3.xpm
-Exec=/usr/bin/thonny
-Terminal=false
-Categories=Development;IDE
-Name[en]=Thonny
-NoDisplay=false
-EOF
 
 #### TSGL for CS112
 apt update -y 
