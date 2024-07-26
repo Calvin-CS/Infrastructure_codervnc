@@ -168,9 +168,8 @@ ENV VNC_SCRIPTS=$VNC_ROOT_DIR/scripts \
 
 # Add required files
 # XFCE4 settings
-RUN mkdir -p ${XFCE_BASE_DIR}/xfconf/xfce-perchannel-xml && \
-    chmod 0755 ${XFCE_BASE_DIR} ${XFCE_BASE_DIR}/xfconf ${XFCE_BASE_DIR}/xfconf/xfce-perchannel-xml
 COPY --chmod=0644 files/xfce4/ ${XFCE_BASE_DIR}/
+RUN chmod 0755 ${XFCE_BASE_DIR} ${XFCE_BASE_DIR}/xfconf ${XFCE_BASE_DIR}/xfconf/xfce-perchannel-xml
 
 RUN sed -i "s+%%BGLOCATION%%+${XFCE_BASE_DIR}+g" ${XFCE_BASE_DIR}/xfconf/xfce-perchannel-xml/displays.xml && \
     sed -i "s+%%BGLOCATION%%+${XFCE_BASE_DIR}+g" ${XFCE_BASE_DIR}/xfconf/xfce-perchannel-xml/xfce4-desktop.xml
@@ -185,6 +184,7 @@ COPY --chmod=0755 files/vnc/setup/set_user_permission.sh ${VNC_ROOT_DIR}/setup/s
 
 # Supervisor settings
 ADD --chmod=0644 files/supervisor/ /etc/supervisor/
+RUN chmod 0755 /etc/supervisor/conf.d
 
 # Install NoVNC and configure
 RUN mkdir -p ${NO_VNC_HOME}/utils/websockify && \
