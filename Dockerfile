@@ -5,7 +5,7 @@ LABEL maintainer="Chris Wieringa <cwieri39@calvin.edu>"
 LABEL "org.opencontainers.image.authors"='Chris Wieringa cwieri39@calvin.edu"'
 
 # Set versions and platforms
-ARG BUILDDATE=20240725-2
+ARG BUILDDATE=20240726-3
 ARG USER=ubuntu
 ARG TZ='America/Detroit'
 
@@ -220,6 +220,10 @@ RUN /scripts/CS214-packages.sh
 ADD --chmod=0755 https://raw.githubusercontent.com/Calvin-CS/Infrastructure_devcontainer/main/scripts/CS262-packages.sh /scripts/CS262-packages.sh
 RUN /scripts/CS262-packages.sh
 
+# CS300
+ADD --chmod=0755 https://raw.githubusercontent.com/Calvin-CS/Infrastructure_devcontainer/main/scripts/CS300-packages.sh /scripts/CS300-packages.sh
+RUN /scripts/CS300-packages.sh
+
 # Desktop apps
 ADD --chmod=0755 files/desktop-packages.sh /scripts/desktop-packages.sh
 ADD --chmod=0755 files/alias.sh /etc/profile.d/
@@ -228,8 +232,6 @@ RUN /scripts/desktop-packages.sh
 # Coder apps
 ADD --chmod=0755 files/coder-apps.sh /scripts/coder-apps.sh
 RUN /scripts/coder-apps.sh
-
-# Custom 
 
 # Clean
 RUN rm -rf /scripts
