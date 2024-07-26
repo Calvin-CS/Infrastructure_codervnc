@@ -164,15 +164,14 @@ ENV VNC_SCRIPTS=$VNC_ROOT_DIR/scripts \
   XFCE_BASE_DIR=$VNC_ROOT_DIR/xfce4 \
   XFCE_DEST_DIR=/home/${USER}/.config/xfce4 \
   SUPERVISORD_USER=${USER} \
-  SUPERVISORD_HOME=/home/${USER}
+  SUPERVISORD_HOME=/home/${USER} \
+  CODESERVER_PORT=13337 \
+  JUPYTERLAB_PORT=8888
 
 # Add required files
 # XFCE4 settings
 COPY --chmod=0644 files/xfce4/ ${XFCE_BASE_DIR}/
 RUN chmod 0755 ${XFCE_BASE_DIR} ${XFCE_BASE_DIR}/xfconf ${XFCE_BASE_DIR}/xfconf/xfce-perchannel-xml
-
-RUN sed -i "s+%%BGLOCATION%%+${XFCE_BASE_DIR}+g" ${XFCE_BASE_DIR}/xfconf/xfce-perchannel-xml/displays.xml && \
-    sed -i "s+%%BGLOCATION%%+${XFCE_BASE_DIR}+g" ${XFCE_BASE_DIR}/xfconf/xfce-perchannel-xml/xfce4-desktop.xml
 
 # VNC settings
 RUN mkdir -p ${VNC_ROOT_DIR}/scripts ${VNC_ROOT_DIR}/setup && \
@@ -265,4 +264,4 @@ RUN locale-gen ${LANG}
 USER ${USER}
 WORKDIR /home/${USER}
 ENTRYPOINT [ "/usr/bin/bash", "-l" ]
-EXPOSE $NO_VNC_PORT
+EXPOSE ${NO_VNC_PORT} ${CODESERVER_PORT} ${JUPYTERLAB_PORT}
