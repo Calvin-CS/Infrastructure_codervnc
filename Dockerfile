@@ -35,6 +35,7 @@ SHELL ["/bin/bash", "-c"]
 RUN apt update -y && \
     apt install -y \
     apt-transport-https \
+    bind9-dnsutils \
     ca-certificates \
     colord \
     curl \
@@ -45,6 +46,7 @@ RUN apt update -y && \
     locales \
     lsb-release \
     nano \
+    netcat-openbsd \
     pm-utils \
     software-properties-common \
     tar \
