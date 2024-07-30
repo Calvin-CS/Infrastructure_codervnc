@@ -41,6 +41,7 @@ RUN apt update -y && \
     git \
     gnupg \
     gpg \
+    iputils-ping \
     locales \
     lsb-release \
     nano \
