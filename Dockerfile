@@ -227,6 +227,10 @@ RUN /scripts/CS262-packages.sh
 ADD --chmod=0755 https://raw.githubusercontent.com/Calvin-CS/Infrastructure_devcontainer/main/scripts/CS300-packages.sh /scripts/CS300-packages.sh
 RUN /scripts/CS300-packages.sh
 
+# DATA202
+ADD --chmod=0755 https://raw.githubusercontent.com/Calvin-CS/Infrastructure_devcontainer/main/scripts/DATA202-packages.sh /scripts/DATA202-packages.sh
+RUN /scripts/DATA202-packages.sh
+
 # Desktop apps
 ADD --chmod=0755 files/desktop-packages.sh /scripts/desktop-packages.sh
 ADD --chmod=0755 files/alias.sh /etc/profile.d/
